@@ -1,4 +1,9 @@
-use std::{fs::File, io::Write, path::PathBuf, process::Command};
+use std::{
+    fs::{create_dir_all, File},
+    io::Write,
+    path::PathBuf,
+    process::Command,
+};
 
 use anyhow::{anyhow, Context, Result};
 use tempfile::TempDir;
@@ -9,6 +14,8 @@ pub fn init_rootfs(root: &PathBuf, manifest: Manifest) -> Result<PathBuf> {
     let mut repo_commands = String::new();
     let initdir = TempDir::with_prefix("rpm2container-")?;
     let initfile_path = initdir.path().join("init.sh");
+    let rootfs = root.join("rootfs");
+    create_dir_all(&rootfs)?;
     for repo in manifest.contents.repositories {
         let ar = format!("zypper  --root /newroot ar -G -f {}\n", repo);
         repo_commands = repo_commands + &ar;
@@ -31,7 +38,7 @@ pub fn init_rootfs(root: &PathBuf, manifest: Manifest) -> Result<PathBuf> {
     let mut init = File::create(&initfile_path)?;
     init.write_all(commands.as_bytes())?;
 
-    let path = root.to_str().context("path was not kosher")?;
+    let path = rootfs.to_str().context("path was not kosher")?;
     let init_file = initfile_path.to_str().context("path was not kosher")?;
     eprintln!("{init_file}");
     let status = Command::new("podman")
@@ -51,6 +58,7 @@ pub fn init_rootfs(root: &PathBuf, manifest: Manifest) -> Result<PathBuf> {
         ])
         .status()?;
     if status.success() {
+        create_dir_all(rootfs.join("/root"))?;
         Ok(root.to_owned())
     } else {
         return Err(anyhow!("init of workspace failed"));

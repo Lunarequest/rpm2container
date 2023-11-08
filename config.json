@@ -1,0 +1,6 @@
+{
+    "root": {
+        "path": "rootfs",
+        "readonly": true
+    }
+}

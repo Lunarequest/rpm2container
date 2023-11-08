@@ -1,5 +1,4 @@
 use serde::Deserialize;
-use serde_yaml::Mapping;
 
 #[derive(Deserialize)]
 pub struct Manifest {
@@ -17,5 +16,5 @@ pub struct Contents {
 pub struct Entrypoint {
     pub command: String,
     pub args: Option<Vec<String>>,
-    pub env: Option<Vec<Mapping>>,
+    pub env: Option<Vec<String>>,
 }
