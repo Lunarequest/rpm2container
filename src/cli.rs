@@ -16,5 +16,9 @@ pub struct Cli {
 
 #[derive(Debug, Clone, Subcommand)]
 pub enum CliCommand {
-    Build { path: PathBuf },
+    Build {
+        #[clap(short = 'i', long = "image")]
+        image: String,
+        path: PathBuf,
+    },
 }

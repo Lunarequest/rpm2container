@@ -8,8 +8,11 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.75"
 clap = { version = "4.4.7", features = ["derive"] }
+flate2 = "1.0.28"
 serde = { version = "1.0.192", features = ["derive"] }
 serde_json = "1.0.108"
 serde_yaml = "0.9.27"
+sha256 = "1.4.0"
+tar = "0.4.40"
 tempfile = "3.8.1"
 tokio = { version = "1.33.0", features = ["full"] }

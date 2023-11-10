@@ -1,9 +1,4 @@
-use std::{
-    fs::{create_dir_all, File},
-    io::Write,
-    path::PathBuf,
-    process::Command,
-};
+use std::{fs::File, io::Write, path::PathBuf, process::Command};
 
 use anyhow::{anyhow, Context, Result};
 use tempfile::TempDir;
@@ -14,8 +9,6 @@ pub fn init_rootfs(root: &PathBuf, manifest: Manifest) -> Result<PathBuf> {
     let mut repo_commands = String::new();
     let initdir = TempDir::with_prefix("rpm2container-")?;
     let initfile_path = initdir.path().join("init.sh");
-    let rootfs = root.join("rootfs");
-    create_dir_all(&rootfs)?;
     for repo in manifest.contents.repositories {
         let ar = format!("zypper  --root /newroot ar -G -f {}\n", repo);
         repo_commands = repo_commands + &ar;
@@ -32,13 +25,15 @@ pub fn init_rootfs(root: &PathBuf, manifest: Manifest) -> Result<PathBuf> {
         #!/bin/bash -x
         {repo_commands}
         zypper --root /newroot in --no-recommends -y {}
+        rm -rf /newroot/var/cache/zypp /newroot/var/lib /newroot/var/adm /newroot/etc/X11 /newroot/etc/aliases.d /newroot/etc/default /newroot/etc/ld.so.conf.d /newroot/etc/logrotate.d /newroot/etc/modprobe.d /newroot/etc/motd.d /newroot/etc/opt /newroot/etc/premissions.d /newroot/etc/profile.d /newroot/etc/skel /newroot/etc/sysconfig /newroot/etc/sysctl.d /newroot/etc/tmpfiles.d /newroot/etc/zypp
+        rm -rf /newroot/boot /newroot/mnt /newroot/opt /newroot/run/lock /newroot/run/zypp.pid
         ",
-        manifest.contents.packages.concat().to_string()
+        manifest.contents.packages.join(" ")
     );
     let mut init = File::create(&initfile_path)?;
     init.write_all(commands.as_bytes())?;
 
-    let path = rootfs.to_str().context("path was not kosher")?;
+    let path = root.to_str().context("path was not kosher")?;
     let init_file = initfile_path.to_str().context("path was not kosher")?;
     eprintln!("{init_file}");
     let status = Command::new("podman")
@@ -58,9 +53,8 @@ pub fn init_rootfs(root: &PathBuf, manifest: Manifest) -> Result<PathBuf> {
         ])
         .status()?;
     if status.success() {
-        create_dir_all(rootfs.join("/root"))?;
         Ok(root.to_owned())
     } else {
-        return Err(anyhow!("init of workspace failed"));
+        Err(anyhow!("init of workspace failed"))
     }
 }

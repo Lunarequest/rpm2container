@@ -1,29 +1,42 @@
 use anyhow::{anyhow, Result};
 use std::{
-    fs::{copy, create_dir},
+    fs::{copy, create_dir, remove_file, File},
     process::Command,
 };
+use tar::Builder;
 
-pub fn pack() -> Result<()> {
+pub fn pack_layer() -> Result<()> {
     create_dir("/tmp/out")?;
     let status = Command::new("podman")
         .args([
             "run",
             "--rm",
             "-v",
-            format!("/tmp/bundle:/bundle").as_str(),
+            "/tmp/bundle:/bundle",
             "-v",
-            format!("/tmp/out:/out").as_str(),
+            "/tmp/out:/out",
             "registry.opensuse.org/opensuse/tumbleweed:latest",
             "sh",
             "-c",
-            "cd /bundle && tar -cvf /out/bundle.tar .",
+            "cd /bundle && tar -czvf /out/bundle.tar.gz . && rm -rvf *",
         ])
         .status()?;
     if status.success() {
-        copy("/tmp/out/bundle.tar", "./bundle.tar")?;
+        copy("/tmp/out/bundle.tar.gz", "./bundle.tar.gz")?;
+        remove_file("/tmp/out/bundle.tar.gz")?;
         Ok(())
     } else {
-        return Err(anyhow!("init of workspace failed"));
+        Err(anyhow!("init of workspace failed"))
     }
+}
+
+pub fn pack_bundle() -> Result<()> {
+    let tar_file = File::create("bundle.tar")?;
+    let mut tar = Builder::new(tar_file);
+
+    tar.append_dir_all(".", "/tmp/out")?;
+
+    tar.finish()?;
+
+    Ok(())
 }
